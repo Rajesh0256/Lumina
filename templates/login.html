@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Login · Lumina{% endblock %}
+{% block auth_content %}
+<div class="auth-card">
+  <div class="auth-logo">
+    <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+      <defs>
+        <linearGradient id="lg2" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#a855f7"/>
+          <stop offset="50%" stop-color="#ec4899"/>
+          <stop offset="100%" stop-color="#f97316"/>
+        </linearGradient>
+      </defs>
+      <path d="M16 2C8.268 2 2 8.268 2 16s6.268 14 14 14 14-6.268 14-14S23.732 2 16 2z" fill="url(#lg2)"/>
+      <path d="M16 9a4 4 0 100 8 4 4 0 000-8z" fill="white"/>
+      <circle cx="22" cy="10" r="1.5" fill="white"/>
+    </svg>
+    <span class="logo-text" style="font-size:28px">lumina</span>
+  </div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  <form method="post" class="auth-form">
+    <input type="text" name="username" placeholder="Username" required autocomplete="username"/>
+    <input type="password" name="password" placeholder="Password" required autocomplete="current-password"/>
+    <button type="submit" class="post-btn" style="width:100%;justify-content:center">Log In</button>
+  </form>
+  <p class="auth-switch">Don't have an account? <a href="{{ url_for('register') }}">Sign up</a></p>
+</div>
+{% endblock %}

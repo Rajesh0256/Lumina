@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+lumina.db
+static/uploads/
+.venv/
+venv/
+*.egg-info/
+dist/

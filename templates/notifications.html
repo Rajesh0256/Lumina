@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Notifications · Lumina{% endblock %}
+{% block content %}
+<div class="notif-page">
+  <h2 class="page-title">Notifications</h2>
+
+  {% if not notifs %}
+  <div class="empty-feed">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+    <p>No notifications yet.</p>
+  </div>
+  {% endif %}
+
+  <div class="notif-list">
+    {% for n in notifs %}
+    <div class="notif-item {% if not n.is_read %}notif-unread{% endif %}">
+      <a href="{{ url_for('profile', username=n.actor.username) }}" class="notif-avatar">
+        <div class="avatar-ring sm">
+          <img src="{{ media_url(n.actor.avatar) }}"
+               alt="{{ n.actor.username }}"
+               onerror="this.src='https://ui-avatars.com/api/?name={{ n.actor.username }}&background=a855f7&color=fff'"/>
+        </div>
+      </a>
+
+      <div class="notif-body">
+        <p>
+          <a href="{{ url_for('profile', username=n.actor.username) }}" class="username">{{ n.actor.username }}</a>
+          {% if n.kind == 'like' %}
+            liked your photo.
+          {% elif n.kind == 'comment' %}
+            commented on your photo.
+          {% elif n.kind == 'follow' %}
+            started following you.
+          {% endif %}
+        </p>
+        <span class="notif-time">{{ n.created_at.strftime('%b %d, %Y · %H:%M') }}</span>
+      </div>
+
+      {% if n.post %}
+      <a href="{{ url_for('profile', username=current_user.username) }}" class="notif-thumb">
+        <img src="{{ media_url(n.post.image) }}" alt="post"/>
+      </a>
+      {% elif n.kind == 'follow' %}
+      <button class="follow-btn"
+              data-uid="{{ n.actor.id }}"
+              data-following="{{ 'true' if current_user.is_following(n.actor) else 'false' }}">
+        {{ 'Following' if current_user.is_following(n.actor) else 'Follow' }}
+      </button>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+

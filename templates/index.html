@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Home · Lumina{% endblock %}
+
+{% block sidebar_extra %}
+{% if suggestions %}
+<div class="suggestions">
+  <div class="suggestions-header">
+    <p class="section-title">Suggested</p>
+    <a href="{{ url_for('explore') }}" class="see-all">See All</a>
+  </div>
+  {% for u in suggestions %}
+  <div class="suggestion-item" id="sug-{{ u.id }}">
+    <a href="{{ url_for('profile', username=u.username) }}" class="avatar-ring sm">
+      <img src="{{ media_url(u.avatar) }}" alt="{{ u.username }}"
+           onerror="this.src='https://ui-avatars.com/api/?name={{ u.username }}&background=a855f7&color=fff'"/>
+    </a>
+    <div class="suggestion-info">
+      <a href="{{ url_for('profile', username=u.username) }}" class="username">{{ u.username }}</a>
+      <p class="suggestion-sub">{{ u.followers.count() }} followers</p>
+    </div>
+    <button class="follow-btn" data-uid="{{ u.id }}" data-following="false">Follow</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if not posts %}
+  <div class="empty-feed">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    <p>Your feed is empty.</p>
+    <a href="{{ url_for('explore') }}" class="post-btn" style="display:inline-flex;margin-top:12px">Explore Posts</a>
+  </div>
+{% endif %}
+
+{% for post in posts %}
+<article class="post" id="post-{{ post.id }}">
+  <div class="post-header">
+    <div class="post-user">
+      <a href="{{ url_for('profile', username=post.author.username) }}" class="avatar-ring">
+        <img src="{{ media_url(post.author.avatar) }}" alt="{{ post.author.username }}"
+             onerror="this.src='https://ui-avatars.com/api/?name={{ post.author.username }}&background=a855f7&color=fff'"/>
+      </a>
+      <div>
+        <a href="{{ url_for('profile', username=post.author.username) }}" class="username">{{ post.author.username }}</a>
+        {% if post.location %}<p class="post-location">{{ post.location }}</p>{% endif %}
+      </div>
+    </div>
+    {% if post.user_id == current_user.id %}
+    <button class="more-btn delete-btn" data-pid="{{ post.id }}" aria-label="Delete post">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </button>
+    {% endif %}
+  </div>
+
+  <div class="post-image">
+    <img src="{{ media_url(post.image) }}" alt="{{ post.caption or 'Post by ' + post.author.username }}" loading="lazy"/>
+  </div>
+
+  <div class="post-actions">
+    <div class="actions-left">
+      <button class="action-btn like-btn {% if post.is_liked_by(current_user) %}liked{% endif %}"
+              data-pid="{{ post.id }}" aria-label="{% if post.is_liked_by(current_user) %}Unlike{% else %}Like{% endif %} post">
+        <svg width="24" height="24" viewBox="0 0 24 24"
+             fill="{% if post.is_liked_by(current_user) %}currentColor{% else %}none{% endif %}"
+             stroke="{% if post.is_liked_by(current_user) %}none{% else %}currentColor{% endif %}" stroke-width="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      </button>
+      <button class="action-btn comment-toggle" data-pid="{{ post.id }}" aria-label="Comment">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="post-info">
+    <p class="likes" id="likes-{{ post.id }}">{{ post.like_count() }} {{ 'like' if post.like_count() == 1 else 'likes' }}</p>
+    {% if post.caption %}
+    <p class="caption"><a href="{{ url_for('profile', username=post.author.username) }}" class="username">{{ post.author.username }}</a> {{ post.caption }}</p>
+    {% endif %}
+
+    {% set comments = post.comments.order_by('created_at').all() %}
+    {% if comments|length > 2 %}
+    <button class="view-comments">View all {{ comments|length }} comments</button>
+    {% endif %}
+    {% for c in comments[-2:] %}
+    <div class="comment"><span class="username">{{ c.author.username }}</span> {{ c.body }}</div>
+    {% endfor %}
+
+    <p class="post-time">{{ post.created_at.strftime('%B %d, %Y') }}</p>
+
+    <!-- Comment box -->
+    <div class="comment-box" id="cbox-{{ post.id }}" hidden>
+      <input type="text" class="comment-input" placeholder="Add a comment…" maxlength="300"/>
+      <button class="comment-submit grad-text" data-pid="{{ post.id }}">Post</button>
+    </div>
+  </div>
+</article>
+{% endfor %}
+{% endblock %}
+

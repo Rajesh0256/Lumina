@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}{{ user.username }} · Lumina{% endblock %}
+{% block content %}
+
+<div class="profile-header">
+  <div class="profile-avatar-wrap">
+    <div class="avatar-ring" style="width:96px;height:96px">
+      <img src="{{ media_url(user.avatar) }}" alt="{{ user.username }}"
+           onerror="this.src='https://ui-avatars.com/api/?name={{ user.username }}&background=a855f7&color=fff&size=96'"/>
+    </div>
+  </div>
+  <div class="profile-info">
+    <div class="profile-top">
+      <h1 class="profile-username">{{ user.username }}</h1>
+      {% if user.id != current_user.id %}
+        {% set is_following = current_user.is_following(user) %}
+        <button class="follow-btn-lg {% if is_following %}following{% endif %}"
+                data-uid="{{ user.id }}"
+                data-following="{{ 'true' if is_following else 'false' }}">
+          {{ 'Following' if is_following else 'Follow' }}
+        </button>
+      {% else %}
+        <a href="{{ url_for('edit_profile') }}" class="follow-btn-lg outline">Edit Profile</a>
+      {% endif %}
+    </div>
+    <div class="profile-stats">
+      <span><strong>{{ posts|length }}</strong> posts</span>
+      <span><strong id="fc-{{ user.id }}">{{ user.followers.count() }}</strong> followers</span>
+      <span><strong>{{ user.following.count() }}</strong> following</span>
+    </div>
+    {% if user.bio %}<p class="profile-bio">{{ user.bio }}</p>{% endif %}
+    {% if user.website %}<a href="{{ user.website }}" class="profile-website" target="_blank" rel="noopener">{{ user.website }}</a>{% endif %}
+  </div>
+</div>
+
+<div class="post-grid">
+  {% for post in posts %}
+  <div class="grid-item" onclick="openModal('{{ media_url(post.image) }}', '{{ post.caption|e }}', '{{ post.author.username }}', {{ post.like_count() }}, {{ post.comments.count() }})">
+    <img src="{{ media_url(post.image) }}" alt="{{ post.caption or 'Post' }}" loading="lazy"/>
+    <div class="grid-overlay">
+      <span>❤ {{ post.like_count() }}</span>
+      <span>💬 {{ post.comments.count() }}</span>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-feed" style="grid-column:1/-1">
+    <p>No posts yet.</p>
+    {% if user.id == current_user.id %}
+    <a href="{{ url_for('upload') }}" class="post-btn" style="display:inline-flex;margin-top:12px">Share your first photo</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Post modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModal()" aria-label="Close">✕</button>
+    <img id="modal-img" src="" alt="Post"/>
+    <div class="modal-info">
+      <p class="username" id="modal-user"></p>
+      <p id="modal-caption" style="font-size:14px;margin-top:4px;color:#555"></p>
+      <p class="likes" id="modal-likes" style="margin-top:8px"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+function openModal(img, caption, username, likes, comments) {
+  document.getElementById('modal-img').src = img;
+  document.getElementById('modal-user').textContent = username;
+  document.getElementById('modal-caption').textContent = caption;
+  document.getElementById('modal-likes').textContent = likes + ' likes · ' + comments + ' comments';
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  // clear src so broken images don't linger
+  setTimeout(() => document.getElementById('modal-img').src = '', 300);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+{% endblock %}
+

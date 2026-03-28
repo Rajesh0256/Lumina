@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Lumina{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+
+<div class="page-wrap">
+
+  <!-- ── Left Sidebar ── -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Logo -->
+    <a href="{{ url_for('index') }}" class="sidebar-logo">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#a855f7"/>
+            <stop offset="50%" stop-color="#ec4899"/>
+            <stop offset="100%" stop-color="#f97316"/>
+          </linearGradient>
+        </defs>
+        <path d="M16 2C8.268 2 2 8.268 2 16s6.268 14 14 14 14-6.268 14-14S23.732 2 16 2z" fill="url(#lg)"/>
+        <path d="M16 9a4 4 0 100 8 4 4 0 000-8z" fill="white"/>
+        <circle cx="22" cy="10" r="1.5" fill="white"/>
+      </svg>
+      <span class="sidebar-logo-text">lumina</span>
+    </a>
+
+    <!-- Nav items -->
+    <nav class="sidebar-nav">
+
+      <a href="{{ url_for('index') }}" class="sn-item {% if request.endpoint=='index' %}active{% endif %}">
+        <span class="sn-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="{% if request.endpoint=='index' %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="{% if request.endpoint=='index' %}0{% else %}1.8{% endif %}">
+            <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
+          </svg>
+        </span>
+        <span class="sn-label">Home</span>
+      </a>
+
+      <a href="#" class="sn-item" id="search-toggle">
+        <span class="sn-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </span>
+        <span class="sn-label">Search</span>
+      </a>
+
+      <a href="{{ url_for('explore') }}" class="sn-item {% if request.endpoint=='explore' %}active{% endif %}">
+        <span class="sn-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        </span>
+        <span class="sn-label">Explore</span>
+      </a>
+
+      <a href="{{ url_for('reels') }}" class="sn-item {% if request.endpoint in ['reels','upload_reel'] %}active{% endif %}">
+        <span class="sn-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><polygon points="10 8 16 11 10 14 10 8" fill="currentColor" stroke="none"/></svg>
+        </span>
+        <span class="sn-label">Reels</span>
+      </a>
+
+      <a href="{{ url_for('messages') }}" class="sn-item {% if request.endpoint in ['messages','message_thread'] %}active{% endif %}">
+        <span class="sn-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </span>
+        <span class="sn-label">Messages</span>
+      </a>
+
+      <a href="{{ url_for('notifications') }}" class="sn-item {% if request.endpoint=='notifications' %}active{% endif %} sn-notif">
+        <span class="sn-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </span>
+        <span class="sn-label">Notifications</span>
+      </a>
+
+      <a href="{{ url_for('upload') }}" class="sn-item {% if request.endpoint=='upload' %}active{% endif %}">
+        <span class="sn-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </span>
+        <span class="sn-label">Create</span>
+      </a>
+
+      <a href="{{ url_for('profile', username=current_user.username) }}"
+         class="sn-item {% if request.endpoint=='profile' and request.view_args.get('username')==current_user.username %}active{% endif %}">
+        <span class="sn-icon sn-avatar-icon">
+          <img src="{{ media_url(current_user.avatar) }}"
+               alt="{{ current_user.username }}"
+               onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.username }}&background=a855f7&color=fff&size=48'"/>
+        </span>
+        <span class="sn-label">Profile</span>
+      </a>
+
+    </nav>
+
+    <!-- More menu at bottom -->
+    <div class="sidebar-bottom">
+      <button class="sn-item sn-more-btn" id="more-btn" aria-expanded="false">
+        <span class="sn-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </span>
+        <span class="sn-label">More</span>
+      </button>
+
+      <!-- More popover -->
+      <div class="more-popover" id="more-popover" hidden>
+        <a href="{{ url_for('edit_profile') }}" class="more-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Settings
+        </a>
+        <a href="{{ url_for('explore') }}" class="more-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <div class="more-divider"></div>
+        <a href="{{ url_for('logout') }}" class="more-item more-item-danger">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Log out
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Search drawer ── -->
+  <div class="search-drawer" id="search-drawer">
+    <div class="search-drawer-inner">
+      <h3 class="search-drawer-title">Search</h3>
+      <form class="search-drawer-form" action="{{ url_for('explore') }}" method="get">
+        <div class="search-drawer-input-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" name="q" placeholder="Search users or posts…" autofocus/>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Main content ── -->
+  <div class="main-wrap">
+    <main class="feed">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="flash flash-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <aside class="right-panel">
+      <div class="profile-card">
+        <a href="{{ url_for('profile', username=current_user.username) }}" class="avatar-ring large">
+          <img src="{{ media_url(current_user.avatar) }}" alt="{{ current_user.username }}"
+               onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.username }}&background=a855f7&color=fff'"/>
+        </a>
+        <div>
+          <a href="{{ url_for('profile', username=current_user.username) }}" class="username">{{ current_user.username }}</a>
+          <p class="display-name">{{ current_user.bio or 'Welcome to Lumina' }}</p>
+        </div>
+      </div>
+      {% block sidebar_extra %}{% endblock %}
+    </aside>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<!-- ── Mobile bottom nav ── -->
+<nav class="bottom-nav">
+  <a href="{{ url_for('index') }}" class="bn-item {% if request.endpoint=='index' %}active{% endif %}">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="{% if request.endpoint=='index' %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="1.8"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/></svg>
+  </a>
+  <a href="{{ url_for('explore') }}" class="bn-item {% if request.endpoint=='explore' %}active{% endif %}">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+  </a>
+  <a href="{{ url_for('upload') }}" class="bn-item bn-create">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+  </a>
+  <a href="#" class="bn-item">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+  </a>
+  <a href="{{ url_for('profile', username=current_user.username) }}" class="bn-item">
+    <img src="{{ media_url(current_user.avatar) }}" alt="Profile" class="nav-avatar"
+         onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.username }}&background=a855f7&color=fff'"/>
+  </a>
+</nav>
+
+{% else %}
+  <main style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">
+    {% block auth_content %}{% endblock %}
+  </main>
+{% endif %}
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% if current_user.is_authenticated %}
+<script>
+// Poll unread notification count every 30s
+function checkNotifs() {
+  fetch('/notifications/count')
+    .then(r => r.json())
+    .then(d => {
+      const dot = document.getElementById('notif-dot');
+      if (dot) dot.style.display = d.count > 0 ? 'block' : 'none';
+    }).catch(() => {});
+}
+checkNotifs();
+setInterval(checkNotifs, 30000);
+</script>
+{% endif %}
+</body>
+</html>
+

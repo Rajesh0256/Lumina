@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Edit Profile · Lumina{% endblock %}
+{% block content %}
+<div class="edit-profile-card">
+  <h2 class="upload-title">Edit Profile</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="post" enctype="multipart/form-data" class="edit-form">
+
+    <!-- Avatar picker -->
+    <div class="avatar-edit-row">
+      <div class="avatar-ring" style="width:80px;height:80px;flex-shrink:0">
+        <img id="avatar-preview"
+             src="{{ media_url(current_user.avatar) }}"
+             alt="{{ current_user.username }}"
+             onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.username }}&background=a855f7&color=fff&size=80'"/>
+      </div>
+      <div class="avatar-edit-info">
+        <p class="username">{{ current_user.username }}</p>
+        <label class="change-photo-btn">
+          <input type="file" name="avatar" id="avatarInput" accept="image/*" hidden/>
+          Change profile photo
+        </label>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" value="{{ current_user.username }}" maxlength="40" required/>
+    </div>
+
+    <div class="form-field">
+      <label for="bio">Bio</label>
+      <textarea id="bio" name="bio" maxlength="160" rows="3" placeholder="Tell people about yourself…">{{ current_user.bio or '' }}</textarea>
+      <span class="char-count" id="bio-count">{{ (current_user.bio or '')|length }}/160</span>
+    </div>
+
+    <div class="form-field">
+      <label for="website">Website</label>
+      <input type="url" id="website" name="website" value="{{ current_user.website or '' }}" placeholder="https://yoursite.com"/>
+    </div>
+
+    <div class="form-field">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" value="{{ current_user.email }}" required/>
+    </div>
+
+    <div class="form-divider"></div>
+    <p class="form-section-label">Change Password <span>(leave blank to keep current)</span></p>
+
+    <div class="form-field">
+      <label for="current_password">Current Password</label>
+      <input type="password" id="current_password" name="current_password" placeholder="Enter current password"/>
+    </div>
+
+    <div class="form-field">
+      <label for="new_password">New Password</label>
+      <input type="password" id="new_password" name="new_password" placeholder="Min 6 characters"/>
+    </div>
+
+    <div class="edit-actions">
+      <button type="submit" class="post-btn" style="padding:10px 28px">Save Changes</button>
+      <a href="{{ url_for('profile', username=current_user.username) }}" class="cancel-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+// Live avatar preview
+document.getElementById('avatarInput').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => document.getElementById('avatar-preview').src = e.target.result;
+  reader.readAsDataURL(file);
+});
+
+// Bio char counter
+const bioEl = document.getElementById('bio');
+const countEl = document.getElementById('bio-count');
+bioEl.addEventListener('input', () => countEl.textContent = bioEl.value.length + '/160');
+</script>
+{% endblock %}
+

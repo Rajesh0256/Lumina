@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% block title %}Messages · Lumina{% endblock %}
+{% block content %}
+<div class="msg-layout">
+
+  <!-- Left: conversation list -->
+  <div class="msg-sidebar">
+    <div class="msg-sidebar-header">
+      <span class="page-title">Messages</span>
+      <!-- New message button -->
+      <div class="new-msg-wrap">
+        <button class="new-msg-btn" id="newMsgBtn" title="New message">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+        </button>
+        <!-- Dropdown to pick user -->
+        <div class="new-msg-dropdown" id="newMsgDropdown" hidden>
+          <p class="new-msg-label">Start a conversation</p>
+          {% for u in all_users %}
+          <a href="{{ url_for('message_thread', user_id=u.id) }}" class="new-msg-user">
+            <div class="avatar-ring sm">
+              <img src="{{ media_url(u.avatar) }}" alt="{{ u.username }}"
+                   onerror="this.src='https://ui-avatars.com/api/?name={{ u.username }}&background=a855f7&color=fff'"/>
+            </div>
+            <span>{{ u.username }}</span>
+          </a>
+          {% else %}
+          <p style="padding:12px;color:var(--muted);font-size:13px">No other users yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="convo-list">
+      {% for u in convos %}
+      <a href="{{ url_for('message_thread', user_id=u.id) }}"
+         class="convo-item {% if active_user and active_user.id == u.id %}convo-active{% endif %}">
+        <div class="avatar-ring sm">
+          <img src="{{ media_url(u.avatar) }}" alt="{{ u.username }}"
+               onerror="this.src='https://ui-avatars.com/api/?name={{ u.username }}&background=a855f7&color=fff'"/>
+        </div>
+        <div class="convo-info">
+          <span class="convo-name {% if unread_map.get(u.id, 0) > 0 %}convo-unread{% endif %}">{{ u.username }}</span>
+          <span class="convo-preview">
+            {% if last_msg.get(u.id) %}
+              {% if last_msg[u.id].sender_id == current_user.id %}You: {% endif %}
+              {{ last_msg[u.id].body[:40] }}{% if last_msg[u.id].body|length > 40 %}…{% endif %}
+            {% endif %}
+          </span>
+        </div>
+        {% if unread_map.get(u.id, 0) > 0 %}
+        <span class="convo-badge">{{ unread_map[u.id] }}</span>
+        {% endif %}
+      </a>
+      {% else %}
+      <div class="msg-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
+          <path d="M22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        <p>No messages yet.</p>
+        <p style="font-size:13px">Click the pencil icon to start a chat.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Right: chat thread -->
+  <div class="msg-thread" id="msgThread">
+    {% if active_user %}
+    <div class="thread-header">
+      <a href="{{ url_for('profile', username=active_user.username) }}" class="thread-user">
+        <div class="avatar-ring sm">
+          <img src="{{ media_url(active_user.avatar) }}" alt="{{ active_user.username }}"
+               onerror="this.src='https://ui-avatars.com/api/?name={{ active_user.username }}&background=a855f7&color=fff'"/>
+        </div>
+        <span class="username">{{ active_user.username }}</span>
+      </a>
+    </div>
+
+    <div class="thread-messages" id="threadMessages">
+      {% for msg in thread %}
+      <div class="bubble-row {% if msg.sender_id == current_user.id %}bubble-mine{% else %}bubble-theirs{% endif %}">
+        <div class="bubble">{{ msg.body }}</div>
+        <span class="bubble-time">{{ msg.created_at.strftime('%H:%M') }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="thread-input-bar">
+      <input type="text" id="msgInput" class="thread-input" placeholder="Message {{ active_user.username }}…" autocomplete="off"/>
+      <button class="thread-send" id="msgSend">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+
+    <script>
+    const threadEl  = document.getElementById('threadMessages');
+    const input     = document.getElementById('msgInput');
+    const sendBtn   = document.getElementById('msgSend');
+    const myId      = {{ current_user.id }};
+    const threadUrl = '{{ url_for("message_thread", user_id=active_user.id) }}';
+
+    // Scroll to bottom on load
+    threadEl.scrollTop = threadEl.scrollHeight;
+
+    async function sendMsg() {
+      const body = input.value.trim();
+      if (!body) return;
+      input.value = '';
+      const res  = await fetch(threadUrl, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({body})
+      });
+      const data = await res.json();
+      if (data.error) return;
+      appendBubble(data.body, data.created_at, true);
+    }
+
+    function appendBubble(body, time, mine) {
+      const row = document.createElement('div');
+      row.className = 'bubble-row ' + (mine ? 'bubble-mine' : 'bubble-theirs');
+      row.innerHTML = `<div class="bubble">${body}</div><span class="bubble-time">${time}</span>`;
+      threadEl.appendChild(row);
+      threadEl.scrollTop = threadEl.scrollHeight;
+    }
+
+    sendBtn.addEventListener('click', sendMsg);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMsg(); });
+
+    // Poll for new messages every 4s
+    let lastId = {{ thread[-1].id if thread else 0 }};
+    setInterval(async () => {
+      const res  = await fetch(`/messages/poll/{{ active_user.id }}?after=${lastId}`);
+      const data = await res.json();
+      data.messages.forEach(m => {
+        appendBubble(m.body, m.created_at, m.sender_id === myId);
+        lastId = m.id;
+      });
+    }, 4000);
+    </script>
+
+    {% else %}
+    <div class="thread-empty">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ddd" stroke-width="1.2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <p>Select a conversation or start a new one.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+// New message dropdown toggle
+const newBtn  = document.getElementById('newMsgBtn');
+const newDrop = document.getElementById('newMsgDropdown');
+if (newBtn && newDrop) {
+  newBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    newDrop.hidden = !newDrop.hidden;
+  });
+  document.addEventListener('click', () => { newDrop.hidden = true; });
+  newDrop.addEventListener('click', e => e.stopPropagation());
+}
+</script>
+{% endblock %}
+

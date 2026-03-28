@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}New Post · Lumina{% endblock %}
+{% block content %}
+<div class="upload-card">
+  <h2 class="upload-title">Share a Photo</h2>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  <form method="post" enctype="multipart/form-data" class="upload-form">
+    <label class="drop-zone" id="dropZone">
+      <input type="file" name="photo" id="photoInput" accept="image/*" required hidden/>
+      <div class="drop-inner" id="dropInner">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#ug)" stroke-width="1.5">
+          <defs>
+            <linearGradient id="ug" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#a855f7"/>
+              <stop offset="100%" stop-color="#f97316"/>
+            </linearGradient>
+          </defs>
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <p>Click or drag a photo here</p>
+        <span>PNG, JPG, GIF, WEBP up to 16MB</span>
+      </div>
+      <img id="preview" src="" alt="Preview" hidden/>
+    </label>
+    <input type="text" name="caption" placeholder="Write a caption..." maxlength="300"/>
+    <input type="text" name="location" placeholder="Add location (optional)" maxlength="100"/>
+    <button type="submit" class="post-btn" style="width:100%;justify-content:center">Share Post</button>
+  </form>
+</div>
+
+<script>
+const input = document.getElementById('photoInput');
+const zone  = document.getElementById('dropZone');
+const inner = document.getElementById('dropInner');
+const prev  = document.getElementById('preview');
+
+zone.addEventListener('click', () => input.click());
+
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) showPreview(file);
+});
+
+input.addEventListener('change', () => { if (input.files[0]) showPreview(input.files[0]); });
+
+function showPreview(file) {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  input.files = dt.files;
+  const reader = new FileReader();
+  reader.onload = e => {
+    prev.src = e.target.result;
+    prev.hidden = false;
+    inner.hidden = true;
+  };
+  reader.readAsDataURL(file);
+}
+</script>
+{% endblock %}

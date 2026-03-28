@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Explore · Lumina{% endblock %}
+{% block content %}
+<h2 style="font-size:18px;font-weight:600;margin-bottom:16px">Explore</h2>
+<div class="post-grid">
+  {% for post in posts %}
+  <a href="{{ url_for('profile', username=post.author.username) }}" class="grid-item">
+    <img src="{{ media_url(post.image) }}" alt="{{ post.caption or 'Post' }}" loading="lazy"/>
+    <div class="grid-overlay">
+      <span>❤ {{ post.like_count() }}</span>
+      <span>💬 {{ post.comments.count() }}</span>
+    </div>
+  </a>
+  {% else %}
+  <div class="empty-feed" style="grid-column:1/-1">
+    <p>No posts yet. Be the first to share!</p>
+    <a href="{{ url_for('upload') }}" class="post-btn" style="display:inline-flex;margin-top:12px">Upload</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
