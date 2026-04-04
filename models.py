@@ -103,7 +103,8 @@ reel_likes = db.Table('reel_likes',
 
 class Reel(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
-    video      = db.Column(db.String(256), nullable=False)
+    video      = db.Column(db.String(256), nullable=True)   # local upload
+    yt_id      = db.Column(db.String(20),  nullable=True)   # YouTube video ID
     caption    = db.Column(db.String(300), default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -117,6 +118,10 @@ class Reel(db.Model):
 
     def is_liked_by(self, user):
         return self.liked_by.filter(reel_likes.c.user_id == user.id).count() > 0
+
+    @property
+    def is_youtube(self):
+        return bool(self.yt_id)
 
 
 class Notification(db.Model):

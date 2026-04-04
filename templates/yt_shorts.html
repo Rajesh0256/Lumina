@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}YouTube Shorts · Lumina{% endblock %}
+{% block content %}
+
+<div class="reels-page">
+  <div class="reels-header">
+    <span class="page-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff0000" style="vertical-align:middle;margin-right:6px"><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.2 2.8 12 2.8 12 2.8s-4.2 0-6.8.1c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.2v2c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.2 21.6 12 21.6 12 21.6s4.2 0 6.8-.2c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-2C23.3 9.1 23 7 23 7zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/></svg>
+      YouTube Shorts
+    </span>
+    <a href="{{ url_for('reels') }}" class="cancel-btn">← My Reels</a>
+  </div>
+
+  <!-- Search bar -->
+  <div class="yt-search-bar">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="ytSearchInput" placeholder="Search YouTube Shorts…"
+           value="{{ query }}" onkeydown="if(event.key==='Enter') searchShorts()"/>
+    <button onclick="searchShorts()" class="yt-search-btn">Search</button>
+  </div>
+
+  <!-- Category pills -->
+  <div class="yt-pills">
+    {% for cat in ['trending','funny','music','dance','cooking','travel','gaming','sports','news','tech'] %}
+    <button class="yt-pill {% if query==cat %}active{% endif %}"
+            onclick="loadCategory('{{ cat }}')">{{ cat|title }}</button>
+    {% endfor %}
+  </div>
+
+  {% if not shorts %}
+  <div class="empty-feed" style="padding:60px 0">
+    {% if not config.get('YOUTUBE_API_KEY') or config.get('YOUTUBE_API_KEY') == 'your_youtube_api_key_here' %}
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <p>YouTube API key not set.</p>
+    <p style="font-size:13px;color:var(--muted)">Add <code>YOUTUBE_API_KEY</code> to your <code>.env</code> file.</p>
+    {% else %}
+    <p>No shorts found for "{{ query }}".</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Shorts grid -->
+  <div class="yt-shorts-grid" id="shortsGrid">
+    {% for s in shorts %}
+    <div class="yt-short-card" id="sc-{{ s.id }}" onclick="openShort('{{ s.id }}', '{{ s.title|e }}', '{{ s.channel|e }}')">
+      <div class="yt-thumb-wrap">
+        <img src="{{ s.thumb }}" alt="{{ s.title }}" loading="lazy"/>
+        <div class="yt-play-btn">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <div class="yt-duration-badge">Short</div>
+      </div>
+      <div class="yt-short-info">
+        <p class="yt-short-title">{{ s.title[:60] }}{% if s.title|length > 60 %}…{% endif %}</p>
+        <p class="yt-short-channel">{{ s.channel }}</p>
+        <p class="yt-short-stats">
+          <span>👁 {{ '{:,}'.format(s.views|int) }}</span>
+          <span>❤ {{ '{:,}'.format(s.likes|int) }}</span>
+        </p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Full-screen player modal -->
+<div class="yt-modal" id="ytModal" onclick="closeShort()">
+  <div class="yt-modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeShort()">✕</button>
+    <div class="yt-modal-player">
+      <iframe id="ytModalFrame" src="" frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+    </div>
+    <div class="yt-modal-info">
+      <p id="ytModalTitle" class="username"></p>
+      <p id="ytModalChannel" style="font-size:13px;color:var(--muted)"></p>
+      <a id="ytModalLink" href="#" target="_blank" class="profile-website" style="margin-top:6px;display:inline-block">
+        Watch on YouTube ↗
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+function openShort(id, title, channel) {
+  document.getElementById('ytModalFrame').src =
+    `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+  document.getElementById('ytModalTitle').textContent   = title;
+  document.getElementById('ytModalChannel').textContent = channel;
+  document.getElementById('ytModalLink').href = `https://youtube.com/shorts/${id}`;
+  document.getElementById('ytModal').classList.add('active');
+}
+
+function closeShort() {
+  document.getElementById('ytModal').classList.remove('active');
+  document.getElementById('ytModalFrame').src = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeShort(); });
+
+function searchShorts() {
+  const q = document.getElementById('ytSearchInput').value.trim();
+  if (q) window.location.href = `/reels/youtube?q=${encodeURIComponent(q)}`;
+}
+
+function loadCategory(cat) {
+  window.location.href = `/reels/youtube?q=${encodeURIComponent(cat)}`;
+}
+</script>
+{% endblock %}

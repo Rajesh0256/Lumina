@@ -17,6 +17,10 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: RENDER
+        value: true
 
 databases:
   - name: lumina-db

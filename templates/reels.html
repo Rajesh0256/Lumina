@@ -5,44 +5,61 @@
 <div class="reels-page">
   <div class="reels-header">
     <span class="page-title">Reels</span>
-    <a href="{{ url_for('upload_reel') }}" class="post-btn" style="padding:8px 18px;font-size:14px">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Upload Reel
-    </a>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a href="{{ url_for('yt_shorts_feed') }}" class="post-btn" style="padding:8px 14px;font-size:13px;background:#ff0000;box-shadow:0 4px 16px rgba(255,0,0,.3)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.2 2.8 12 2.8 12 2.8s-4.2 0-6.8.1c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.2v2c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.2 21.6 12 21.6 12 21.6s4.2 0 6.8-.2c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-2C23.3 9.1 23 7 23 7zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/></svg>
+        YouTube Shorts
+      </a>
+      <a href="{{ url_for('upload_reel') }}" class="post-btn" style="padding:8px 14px;font-size:13px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Reel
+      </a>
+    </div>
   </div>
 
   {% if not reels %}
   <div class="empty-feed" style="padding:80px 0">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.2">
-      <rect x="2" y="3" width="20" height="14" rx="2"/>
-      <path d="M8 21h8M12 17v4"/>
+      <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
     </svg>
     <p>No reels yet.</p>
-    <a href="{{ url_for('upload_reel') }}" class="post-btn" style="display:inline-flex;margin-top:8px">Upload the first reel</a>
+    <a href="{{ url_for('upload_reel') }}" class="post-btn" style="display:inline-flex;margin-top:8px">Add the first reel</a>
   </div>
   {% endif %}
 
   <div class="reels-feed" id="reelsFeed">
     {% for reel in reels %}
-    <div class="reel-card" id="reel-{{ reel.id }}" data-index="{{ loop.index0 }}">
+    <div class="reel-card" id="reel-{{ reel.id }}">
 
-      <!-- Video -->
+      <!-- ── YouTube embed ── -->
+      {% if reel.is_youtube %}
+      <div class="reel-video-wrap reel-yt-wrap">
+        <iframe
+          class="reel-yt-frame"
+          src="https://www.youtube.com/embed/{{ reel.yt_id }}?autoplay=0&loop=1&playlist={{ reel.yt_id }}&rel=0&modestbranding=1&playsinline=1"
+          title="{{ reel.caption or 'Reel' }}"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen>
+        </iframe>
+      </div>
+
+      <!-- ── Local video ── -->
+      {% else %}
       <div class="reel-video-wrap">
-        <video class="reel-video" src="{{ media_url(reel.video) }}"
+        <video class="reel-video"
+               src="{{ media_url(reel.video) }}"
                loop playsinline preload="none"
                onclick="togglePlay(this)"></video>
-
-        <!-- Play/pause overlay -->
         <div class="reel-play-overlay" onclick="togglePlay(this.previousElementSibling)">
           <svg class="play-icon" width="56" height="56" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         </div>
-
-        <!-- Mute button -->
         <button class="reel-mute-btn" onclick="toggleMute(this)" aria-label="Toggle mute">
           <svg class="icon-sound" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           <svg class="icon-mute" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
         </button>
       </div>
+      {% endif %}
 
       <!-- Right action bar -->
       <div class="reel-actions">
@@ -59,13 +76,24 @@
         </div>
 
         <div class="reel-action-group">
-          <a href="{{ url_for('profile', username=reel.author.username) }}" class="reel-action-btn" aria-label="Profile">
+          <a href="{{ url_for('profile', username=reel.author.username) }}" class="reel-action-btn">
             <div class="reel-avatar">
               <img src="{{ media_url(reel.author.avatar) }}" alt="{{ reel.author.username }}"
                    onerror="this.src='https://ui-avatars.com/api/?name={{ reel.author.username }}&background=a855f7&color=fff'"/>
             </div>
           </a>
         </div>
+
+        {% if reel.is_youtube %}
+        <div class="reel-action-group">
+          <a href="https://www.youtube.com/watch?v={{ reel.yt_id }}" target="_blank"
+             class="reel-action-btn" aria-label="Watch on YouTube" title="Watch on YouTube">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+              <path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.2 2.8 12 2.8 12 2.8s-4.2 0-6.8.1c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.2v2c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.2 21.6 12 21.6 12 21.6s4.2 0 6.8-.2c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-2C23.3 9.1 23 7 23 7zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/>
+            </svg>
+          </a>
+        </div>
+        {% endif %}
 
         {% if reel.user_id == current_user.id %}
         <div class="reel-action-group">
@@ -79,6 +107,12 @@
       <!-- Bottom info -->
       <div class="reel-info">
         <a href="{{ url_for('profile', username=reel.author.username) }}" class="reel-username">@{{ reel.author.username }}</a>
+        {% if reel.is_youtube %}
+          <span class="reel-yt-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff0000"><path d="M23 7s-.3-2-1.2-2.8c-1.1-1.2-2.4-1.2-3-1.3C16.2 2.8 12 2.8 12 2.8s-4.2 0-6.8.1c-.6.1-1.9.1-3 1.3C1.3 5 1 7 1 7S.7 9.1.7 11.2v2c0 2.1.3 4.2.3 4.2s.3 2 1.2 2.8c1.1 1.2 2.6 1.1 3.3 1.2C7.2 21.6 12 21.6 12 21.6s4.2 0 6.8-.2c.6-.1 1.9-.1 3-1.3.9-.8 1.2-2.8 1.2-2.8s.3-2.1.3-4.2v-2C23.3 9.1 23 7 23 7zM9.7 15.5V8.4l8.1 3.6-8.1 3.5z"/></svg>
+            YouTube Short
+          </span>
+        {% endif %}
         {% if reel.caption %}<p class="reel-caption">{{ reel.caption }}</p>{% endif %}
         <p class="reel-time">{{ reel.created_at.strftime('%b %d, %Y') }}</p>
       </div>
@@ -89,11 +123,9 @@
 </div>
 
 <script>
-// ── Play / Pause ──────────────────────────────────────────
 function togglePlay(video) {
   const overlay = video.nextElementSibling;
   if (video.paused) {
-    // pause all others first
     document.querySelectorAll('.reel-video').forEach(v => {
       if (v !== video) { v.pause(); v.nextElementSibling.style.opacity = '1'; }
     });
@@ -105,19 +137,17 @@ function togglePlay(video) {
   }
 }
 
-// ── Mute ─────────────────────────────────────────────────
 function toggleMute(btn) {
   const video = btn.closest('.reel-video-wrap').querySelector('.reel-video');
   video.muted = !video.muted;
-  btn.querySelector('.icon-sound').style.display = video.muted ? 'none'  : '';
-  btn.querySelector('.icon-mute').style.display  = video.muted ? ''      : 'none';
+  btn.querySelector('.icon-sound').style.display = video.muted ? 'none' : '';
+  btn.querySelector('.icon-mute').style.display  = video.muted ? ''     : 'none';
 }
 
-// ── Like ─────────────────────────────────────────────────
 document.addEventListener('click', async e => {
   const btn = e.target.closest('.reel-like');
   if (!btn) return;
-  const rid = btn.dataset.rid;
+  const rid  = btn.dataset.rid;
   const res  = await fetch(`/reels/like/${rid}`, { method: 'POST' });
   const data = await res.json();
   const svg  = btn.querySelector('svg');
@@ -134,20 +164,17 @@ document.addEventListener('click', async e => {
   document.getElementById(`rlc-${rid}`).textContent = data.count;
 });
 
-// ── Delete ────────────────────────────────────────────────
 document.addEventListener('click', async e => {
   const btn = e.target.closest('.reel-delete-btn');
   if (!btn) return;
   if (!confirm('Delete this reel?')) return;
-  const rid = btn.dataset.rid;
+  const rid  = btn.dataset.rid;
   const res  = await fetch(`/reels/delete/${rid}`, { method: 'POST' });
   const data = await res.json();
-  if (data.status === 'deleted') {
-    document.getElementById(`reel-${rid}`)?.remove();
-  }
+  if (data.status === 'deleted') document.getElementById(`reel-${rid}`)?.remove();
 });
 
-// ── IntersectionObserver: autoplay when in view ───────────
+// Autoplay local videos when scrolled into view
 const observer = new IntersectionObserver(entries => {
   entries.forEach(entry => {
     const video   = entry.target.querySelector('.reel-video');
@@ -166,4 +193,3 @@ const observer = new IntersectionObserver(entries => {
 document.querySelectorAll('.reel-card').forEach(card => observer.observe(card));
 </script>
 {% endblock %}
-

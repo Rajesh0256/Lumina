@@ -49,13 +49,6 @@ def too_large(e):
     flash('File is too large. Maximum size is 200MB.', 'error')
     return redirect(request.referrer or url_for('index')), 413
 
-# ── Force HTTPS in production ────────────────────────────
-@app.before_request
-def force_https():
-    # Only redirect in production (when behind Render/proxy)
-    if os.environ.get('DATABASE_URL') and not request.is_secure:
-        url = request.url.replace('http://', 'https://', 1)
-        return redirect(url, code=301)
 
 # ── Jinja helper: resolve media URLs (local or Cloudinary) ──
 @app.context_processor
@@ -130,6 +123,19 @@ def push_notification(user_id, actor_id, kind, post_id=None):
         return
     n = Notification(user_id=user_id, actor_id=actor_id, kind=kind, post_id=post_id)
     db.session.add(n)
+
+def extract_yt_id(url):
+    """Extract YouTube video ID from any YouTube URL format."""
+    import re
+    patterns = [
+        r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})',
+    ]
+    for p in patterns:
+        m = re.search(p, url)
+        if m:
+            # strip any trailing query params that got captured
+            return m.group(1)[:11]
+    return None
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -488,6 +494,73 @@ def message_poll(user_id):
          'created_at': m.created_at.strftime('%H:%M')} for m in msgs
     ]})
 
+# ── YouTube Shorts API ───────────────────────────────────
+def fetch_yt_shorts(query='shorts', max_results=20):
+    """Fetch YouTube Shorts via YouTube Data API v3."""
+    api_key = os.environ.get('YOUTUBE_API_KEY')
+    if not api_key or api_key == 'your_youtube_api_key_here':
+        return []
+    try:
+        from googleapiclient.discovery import build
+        youtube = build('youtube', 'v3', developerKey=api_key)
+        # Search for shorts (vertical videos under 60s)
+        search_resp = youtube.search().list(
+            part='snippet',
+            q=query + ' #shorts',
+            type='video',
+            videoDuration='short',
+            maxResults=max_results,
+            order='viewCount',
+            relevanceLanguage='en'
+        ).execute()
+
+        video_ids = [item['id']['videoId'] for item in search_resp.get('items', [])]
+        if not video_ids:
+            return []
+
+        # Get video details to filter actual shorts (≤60s)
+        videos_resp = youtube.videos().list(
+            part='snippet,contentDetails,statistics',
+            id=','.join(video_ids)
+        ).execute()
+
+        shorts = []
+        for item in videos_resp.get('items', []):
+            duration = item['contentDetails']['duration']  # e.g. PT58S
+            # Parse ISO 8601 duration — keep only ≤60s
+            import re
+            m = re.match(r'PT(?:(\d+)M)?(?:(\d+)S)?', duration)
+            minutes = int(m.group(1) or 0)
+            seconds = int(m.group(2) or 0)
+            total   = minutes * 60 + seconds
+            if total <= 60:
+                shorts.append({
+                    'id':        item['id'],
+                    'title':     item['snippet']['title'],
+                    'channel':   item['snippet']['channelTitle'],
+                    'thumb':     item['snippet']['thumbnails'].get('high', {}).get('url', ''),
+                    'views':     item['statistics'].get('viewCount', '0'),
+                    'likes':     item['statistics'].get('likeCount', '0'),
+                })
+        return shorts
+    except Exception as e:
+        print(f'YouTube API error: {e}')
+        return []
+
+@app.route('/reels/youtube')
+@login_required
+def yt_shorts_feed():
+    query = request.args.get('q', 'trending')
+    shorts = fetch_yt_shorts(query=query, max_results=20)
+    return render_template('yt_shorts.html', shorts=shorts, query=query)
+
+@app.route('/reels/youtube/search')
+@login_required
+def yt_shorts_search():
+    query = request.args.get('q', 'trending')
+    shorts = fetch_yt_shorts(query=query, max_results=20)
+    return jsonify(shorts)
+
 # ── Reels ─────────────────────────────────────────────────
 @app.route('/reels')
 @login_required
@@ -499,16 +572,27 @@ def reels():
 @login_required
 def upload_reel():
     if request.method == 'POST':
+        yt_url  = request.form.get('yt_url', '').strip()
         file    = request.files.get('video')
         caption = request.form.get('caption', '').strip()
-        if not file or not allowed_video(file.filename):
-            flash('Please upload a valid video (mp4, mov, webm).', 'error')
+
+        if yt_url:
+            # Extract YouTube video ID from any YT URL format
+            yt_id = extract_yt_id(yt_url)
+            if not yt_id:
+                flash('Invalid YouTube URL. Please paste a valid YouTube or YouTube Shorts link.', 'error')
+                return redirect(url_for('upload_reel'))
+            reel = Reel(yt_id=yt_id, caption=caption, user_id=current_user.id)
+        elif file and file.filename and allowed_video(file.filename):
+            video_path = save_video(file)
+            reel = Reel(video=video_path, caption=caption, user_id=current_user.id)
+        else:
+            flash('Please upload a video file or paste a YouTube URL.', 'error')
             return redirect(url_for('upload_reel'))
-        video_path = save_video(file)
-        reel = Reel(video=video_path, caption=caption, user_id=current_user.id)
+
         db.session.add(reel)
         db.session.commit()
-        flash('Reel uploaded!', 'success')
+        flash('Reel shared!', 'success')
         return redirect(url_for('reels'))
     return render_template('upload_reel.html')
 
@@ -541,4 +625,7 @@ def delete_reel(reel_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+    print("✅ Lumina running at http://127.0.0.1:5000")
+    print("✅ On your network: http://192.168.0.106:5000")
+    print("   Press CTRL+C to stop\n")
     app.run(host='0.0.0.0', port=5000, debug=False)

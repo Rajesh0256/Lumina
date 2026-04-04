@@ -9,3 +9,4 @@ psycopg2-binary==2.9.9
 cloudinary==1.40.0
 python-dotenv==1.0.1
 pyopenssl==24.1.0
+google-api-python-client==2.131.0
